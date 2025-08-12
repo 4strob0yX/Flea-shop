@@ -1,0 +1,13 @@
+# views/theme.py
+COLOR_FONDO_APP = "#d3eaa6"
+COLOR_FONDO_FRAME = "#FFFFFF"
+COLOR_FONDO_SIDEBAR = "#f0f4e8"
+COLOR_TEXTO_PRINCIPAL = "#244c26"
+COLOR_TEXTO_SECUNDARIO = "#41602b"
+COLOR_PRIMARIO = "#84af24"
+COLOR_PRIMARIO_HOVER = "#41602b"
+COLOR_BORDE = "#bcc4a7"
+FUENTE_TITULO = ("Helvetica", 32, "bold")
+FUENTE_SUBTITULO = ("Helvetica", 24, "bold")
+FUENTE_NORMAL = ("Helvetica", 14)
+FUENTE_BOLD = ("Helvetica", 14, "bold")
