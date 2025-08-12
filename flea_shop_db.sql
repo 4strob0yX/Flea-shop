@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 06-08-2025 a las 08:18:37
+-- Tiempo de generación: 12-08-2025 a las 04:58:56
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.0.30
 
@@ -24,6 +24,30 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `messages`
+--
+
+CREATE TABLE `messages` (
+  `id` int(11) NOT NULL,
+  `sender_id` int(11) NOT NULL,
+  `receiver_id` int(11) NOT NULL,
+  `message_text` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `is_read` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Volcado de datos para la tabla `messages`
+--
+
+INSERT INTO `messages` (`id`, `sender_id`, `receiver_id`, `message_text`, `created_at`, `is_read`) VALUES
+(1, 2, 1, 'Hey q onda', '2025-08-12 02:10:17', 0),
+(2, 1, 2, 'Q onda', '2025-08-12 02:39:31', 0),
+(3, 3, 1, 'Hola', '2025-08-12 02:40:26', 0);
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `products`
 --
 
@@ -35,22 +59,20 @@ CREATE TABLE `products` (
   `precio` decimal(10,2) NOT NULL,
   `imagen_path` varchar(255) DEFAULT NULL,
   `vendido` tinyint(1) DEFAULT 0,
-  `comprador_user_id` int(11) DEFAULT NULL
+  `comprador_user_id` int(11) DEFAULT NULL,
+  `direccion` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `products`
 --
 
-INSERT INTO `products` (`id`, `owner_user_id`, `nombre`, `descripcion`, `precio`, `imagen_path`, `vendido`, `comprador_user_id`) VALUES
-(4, 2, 'tung tung tung sahur', 'tung', 100.00, '', 0, NULL),
-(5, 1, 'tralalero', 'tralalero', 1000.00, '', 1, 2),
-(6, 2, 'La vaca saturno saturnita', 'La vaca', 1000.00, '', 1, 2),
-(7, 1, 'Los tralaleritos', 'Los tralaleritos', 1000.00, '', 1, 2),
-(8, 2, 'Los tralaleritoss', 'Los tralaleritoss', 1000.00, '', 0, NULL),
-(9, 2, 'Ta ta ta ta sahur', 'ta ta ta ta ta sahur', 1000.00, '', 0, NULL),
-(10, 2, 'Prr prr patapim', 'Prr prr patapim', 1000.00, '', 0, NULL),
-(11, 2, 'tung tung', 'Ta ta ta', 1000.00, '', 0, NULL);
+INSERT INTO `products` (`id`, `owner_user_id`, `nombre`, `descripcion`, `precio`, `imagen_path`, `vendido`, `comprador_user_id`, `direccion`) VALUES
+(14, 1, 'Tralaleritos', 'Los tralaleritos', 1000.00, 'images/Tralaleritos_14.jpg', 0, NULL, NULL),
+(16, 1, 'La vaca saturno saturnita', 'La vaca saturno saturnita', 1000.00, 'images/La_vaca_saturno_saturnita_1754962749.jpeg', 0, NULL, NULL),
+(17, 1, 'Tung tung tung tung tung tung tung tung sahur', 'Tung tung sahur', 1000.00, 'images/Tung_tung_tung_tung_tung_tung_tung_tung_sahur_1754963028.jpg', 0, NULL, NULL),
+(18, 2, 'Kar kir kur', 'Kar kir kur', 1500.00, 'images/Kar_kir_kur_1754964559.png', 0, NULL, 'Lerma, Mexico'),
+(19, 2, 'Chicleteira bicicleteira', 'Chicletera bicicletera', 1695.00, 'images/Chicleteira_bicicleteira_1754964602.jpeg', 0, NULL, 'Lerma, Estado de Mexico');
 
 -- --------------------------------------------------------
 
@@ -67,16 +89,6 @@ CREATE TABLE `trades` (
   `status` varchar(20) DEFAULT 'pendiente',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Volcado de datos para la tabla `trades`
---
-
-INSERT INTO `trades` (`id`, `proposer_user_id`, `proposer_product_id`, `receiver_user_id`, `receiver_product_id`, `status`, `created_at`) VALUES
-(1, 1, 4, 2, 5, 'completado', '2025-08-06 04:12:52'),
-(2, 2, 8, 1, 7, 'pendiente', '2025-08-06 04:54:37'),
-(3, 2, 4, 1, 7, 'pendiente', '2025-08-06 04:56:17'),
-(4, 2, 8, 1, 7, 'pendiente', '2025-08-06 05:00:00');
 
 -- --------------------------------------------------------
 
@@ -101,16 +113,18 @@ CREATE TABLE `users` (
   `ultimo_login` datetime DEFAULT NULL,
   `verificado` tinyint(1) DEFAULT 0,
   `reputacion` float DEFAULT 0,
-  `nivel` varchar(50) DEFAULT 'Nuevo'
+  `nivel` varchar(50) DEFAULT 'Nuevo',
+  `cart_items` text DEFAULT '[]'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `users`
 --
 
-INSERT INTO `users` (`id`, `nombre`, `apellidos`, `email`, `password_hash`, `telefono`, `fecha_registro`, `username`, `foto_perfil`, `direccion`, `fecha_nacimiento`, `is_admin`, `estado`, `ultimo_login`, `verificado`, `reputacion`, `nivel`) VALUES
-(1, 'Sam', 'Gutierrez', 's@gmail.com', '$2b$12$K44ZQgPVKSnHs/kKqzgoEuZCExSUG4SKLfJbqxDrmrZDA2f43AnEi', '7224108974', '2025-08-06 03:58:21', NULL, NULL, NULL, NULL, 0, 'activo', NULL, 0, 0, 'Nuevo'),
-(2, 'Sam', 'Gutierrez', 'sam2@gmail.com', '$2b$12$DPX6K9z1PkhaMqhpJtSuiuwC4WS5ApgSLMMx5GWPbLn0.A2POXK/W', '7224108993', '2025-08-06 04:11:14', '', NULL, '', '0000-00-00', 0, 'activo', NULL, 0, 0, 'Nuevo');
+INSERT INTO `users` (`id`, `nombre`, `apellidos`, `email`, `password_hash`, `telefono`, `fecha_registro`, `username`, `foto_perfil`, `direccion`, `fecha_nacimiento`, `is_admin`, `estado`, `ultimo_login`, `verificado`, `reputacion`, `nivel`, `cart_items`) VALUES
+(1, 'Sam', 'Gutierrez', 's@gmail.com', '$2b$12$K44ZQgPVKSnHs/kKqzgoEuZCExSUG4SKLfJbqxDrmrZDA2f43AnEi', '7224108974', '2025-08-06 03:58:21', NULL, NULL, NULL, NULL, 0, 'activo', NULL, 0, 0, 'Nuevo', '[]'),
+(2, 'Sam', 'Gutierrez', 'sam2@gmail.com', '$2b$12$DPX6K9z1PkhaMqhpJtSuiuwC4WS5ApgSLMMx5GWPbLn0.A2POXK/W', '7224108993', '2025-08-06 04:11:14', '', NULL, '', '0000-00-00', 0, 'activo', NULL, 0, 0, 'Nuevo', '[]'),
+(3, '', '', 'a@gmail.com', '$2b$12$CN.vSFNQs4AkAsxVlILJ6eJO6ytVzyTPs2XfJdevDpFArb6Ws/JF.', '', '2025-08-12 02:40:01', 'Aposho', '', '', '0000-00-00', 0, 'activo', NULL, 0, 0, 'Nuevo', '[]');
 
 -- --------------------------------------------------------
 
@@ -126,17 +140,16 @@ CREATE TABLE `wishlists` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Volcado de datos para la tabla `wishlists`
---
-
-INSERT INTO `wishlists` (`id`, `user_id`, `product_id`, `created_at`) VALUES
-(1, 2, 5, '2025-08-06 04:53:19'),
-(2, 2, 7, '2025-08-06 04:54:21'),
-(3, 2, 4, '2025-08-06 05:17:45');
-
---
 -- Índices para tablas volcadas
 --
+
+--
+-- Indices de la tabla `messages`
+--
+ALTER TABLE `messages`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `receiver_id` (`receiver_id`),
+  ADD KEY `idx_messages_sender_receiver` (`sender_id`,`receiver_id`);
 
 --
 -- Indices de la tabla `products`
@@ -176,10 +189,16 @@ ALTER TABLE `wishlists`
 --
 
 --
+-- AUTO_INCREMENT de la tabla `messages`
+--
+ALTER TABLE `messages`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
 -- AUTO_INCREMENT de la tabla `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT de la tabla `trades`
@@ -191,7 +210,7 @@ ALTER TABLE `trades`
 -- AUTO_INCREMENT de la tabla `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT de la tabla `wishlists`
@@ -202,6 +221,13 @@ ALTER TABLE `wishlists`
 --
 -- Restricciones para tablas volcadas
 --
+
+--
+-- Filtros para la tabla `messages`
+--
+ALTER TABLE `messages`
+  ADD CONSTRAINT `messages_ibfk_1` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `messages_ibfk_2` FOREIGN KEY (`receiver_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Filtros para la tabla `products`
