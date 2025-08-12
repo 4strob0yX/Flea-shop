@@ -108,7 +108,8 @@ class RegisterPage(BasePage):
         self.register_btn.pack(fill="x", pady=10)
         self.login_label = ctk.CTkLabel(self.inner_frame, text="¿Ya tienes cuenta? Inicia Sesión", text_color=theme.COLOR_PRIMARIO, font=("Helvetica", 12, "underline"), cursor="hand2")
         self.login_label.pack(pady=(20, 0))
-        self.login_label.bind("<Button-1>", lambda e: self.controller.view.switch("register"))
+        # --- CÓDIGO CORREGIDO ---
+        self.login_label.bind("<Button-1>", lambda e: self.controller.view.switch("login"))
     def register(self):
         campos_registro = ["username", "email", "password", "confirm_password"]
         data = {key: self.fields[key].get().strip() if key in self.fields else '' for key in campos_registro}
@@ -565,13 +566,10 @@ class AllChatsPage(BasePage):
             return
         
         for conv in conversations:
-            # CORRECCIÓN: Usar un CTkFrame como contenedor y un botón dentro (o manejar el clic en el frame)
             chat_card = ctk.CTkFrame(self.scrollable_frame, fg_color=theme.COLOR_FONDO_FRAME, border_width=1, border_color=theme.COLOR_BORDE, corner_radius=10, cursor="hand2")
-            chat_card.pack(fill="x", pady=5, padx=10)
-            
+            chat_card.pack(fill="x", pady=5, padx=10, ipady=10)
             chat_card.bind("<Button-1>", lambda event, other_id=conv['other_user_id']: self.controller.show_chat_page(other_id))
             
-            # Crear un frame interno para usar pack sin conflictos
             inner_card_frame = ctk.CTkFrame(chat_card, fg_color="transparent")
             inner_card_frame.pack(padx=15, pady=10, fill="x")
 
@@ -582,7 +580,6 @@ class AllChatsPage(BasePage):
             label_msg = ctk.CTkLabel(inner_card_frame, text=conv.get('last_message', '')[:60] + "...", font=theme.FUENTE_NORMAL)
             label_msg.pack(side="top", anchor="w")
             label_msg.bind("<Button-1>", lambda event, other_id=conv['other_user_id']: self.controller.show_chat_page(other_id))
-
 
 class ChatPage(BasePage):
     def __init__(self, parent, controller):
