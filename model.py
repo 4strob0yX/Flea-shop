@@ -2,63 +2,9 @@
 import mysql.connector
 from mysql.connector import Error
 import bcrypt
+import json
 
 class Model:
-
-    # --- Carrito de compras persistente por usuario ---
-    import json
-    def get_user_cart(self, user_id):
-        query = "SELECT cart_items FROM users WHERE id = %s"
-        result = self._execute_query(query, (user_id,), fetch='one')
-        if result and result.get('cart_items'):
-            try:
-                return self.json.loads(result['cart_items'])
-            except Exception:
-                return []
-        return []
-
-    def add_to_cart(self, user_id, product_id):
-        cart = self.get_user_cart(user_id)
-        if product_id not in cart:
-            cart.append(product_id)
-        query = "UPDATE users SET cart_items = %s WHERE id = %s"
-        return self._execute_query(query, (self.json.dumps(cart), user_id), is_commit=True)
-
-    def remove_from_cart(self, user_id, product_id):
-        cart = self.get_user_cart(user_id)
-        if product_id in cart:
-            cart.remove(product_id)
-        query = "UPDATE users SET cart_items = %s WHERE id = %s"
-        return self._execute_query(query, (self.json.dumps(cart), user_id), is_commit=True)
-
-    def clear_cart(self, user_id):
-        query = "UPDATE users SET cart_items = '[]' WHERE id = %s"
-        return self._execute_query(query, (user_id,), is_commit=True)
-
-    def get_cart_products(self, user_id):
-        cart = self.get_user_cart(user_id)
-        if not cart:
-            return []
-        format_strings = ','.join(['%s'] * len(cart))
-        query = f"SELECT p.*, u.nombre as owner_name FROM products p JOIN users u ON p.owner_user_id = u.id WHERE p.id IN ({format_strings})"
-        return self._execute_query(query, tuple(cart), fetch='all')
-
-    # --- Compras ---
-    def buy_product(self, user_id, product_id):
-        # Marca el producto como vendido y asigna el comprador
-        query = "UPDATE products SET vendido = 1, comprador_user_id = %s WHERE id = %s AND vendido = 0"
-        return self._execute_query(query, (user_id, product_id), is_commit=True)
-
-    def get_user_purchases(self, user_id):
-        query = '''
-            SELECT p.*, u.nombre as owner_name
-            FROM products p
-            JOIN users u ON p.owner_user_id = u.id
-            WHERE p.comprador_user_id = %s
-        '''
-        return self._execute_query(query, (user_id,), fetch='all')
-    def _create_connection(self):
-        return mysql.connector.connect(**self.db_config)
     def __init__(self, db_config):
         self.db_config = db_config
 
@@ -84,25 +30,133 @@ class Model:
                 conn.close()
         return result
 
+    # --- NUEVO: Lógica para la página de todos los chats ---
+    def get_user_conversations(self, user_id):
+        query = """
+            SELECT 
+                other_user.id as other_user_id,
+                other_user.username as other_user_name,
+                last_msg.message_text as last_message,
+                last_msg.created_at as last_message_time
+            FROM (
+                SELECT
+                    CASE
+                        WHEN sender_id = %s THEN receiver_id
+                        ELSE sender_id
+                    END as other_user_id,
+                    MAX(id) as max_message_id
+                FROM messages
+                WHERE sender_id = %s OR receiver_id = %s
+                GROUP BY
+                    CASE
+                        WHEN sender_id = %s THEN receiver_id
+                        ELSE sender_id
+                    END
+            ) as conversations
+            JOIN users as other_user ON other_user.id = conversations.other_user_id
+            JOIN messages as last_msg ON last_msg.id = conversations.max_message_id
+            ORDER BY last_msg.created_at DESC;
+        """
+        return self._execute_query(query, (user_id, user_id, user_id, user_id), fetch='all')
+
+    def send_message(self, sender_id, receiver_id, message_text):
+        query = "INSERT INTO messages (sender_id, receiver_id, message_text) VALUES (%s, %s, %s)"
+        return self._execute_query(query, (sender_id, receiver_id, message_text), is_commit=True)
+
+    def get_conversation(self, user1_id, user2_id):
+        query = """
+            SELECT m.*, u.username as sender_name 
+            FROM messages m
+            JOIN users u ON m.sender_id = u.id
+            WHERE (m.sender_id = %s AND m.receiver_id = %s) OR (m.sender_id = %s AND m.receiver_id = %s)
+            ORDER BY m.created_at ASC
+        """
+        return self._execute_query(query, (user1_id, user2_id, user2_id, user1_id), fetch='all')
+
+    def add_product(self, data):
+        query = """
+            INSERT INTO products (owner_user_id, nombre, descripcion, precio, imagen_path, direccion)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        params = (
+            data['owner_user_id'], data['nombre'], data.get('descripcion', ''),
+            float(data['precio']), data.get('imagen_path', ''), data.get('direccion', '')
+        )
+        return self._execute_query(query, params, is_commit=True)
+        
+    def update_product(self, data, product_id, user_id):
+        query = """
+            UPDATE products SET nombre=%s, descripcion=%s, precio=%s, imagen_path=%s, direccion=%s 
+            WHERE id=%s AND owner_user_id=%s
+        """
+        params = (
+            data['nombre'], data['descripcion'], data['precio'], 
+            data.get('imagen_path', ''), data.get('direccion', ''), product_id, user_id
+        )
+        return self._execute_query(query, params, is_commit=True)
+
+    def get_user_cart(self, user_id):
+        query = "SELECT cart_items FROM users WHERE id = %s"
+        result = self._execute_query(query, (user_id,), fetch='one')
+        if result and result.get('cart_items'):
+            try:
+                return json.loads(result['cart_items'])
+            except Exception:
+                return []
+        return []
+
+    def add_to_cart(self, user_id, product_id):
+        cart = self.get_user_cart(user_id)
+        if product_id not in cart:
+            cart.append(product_id)
+        query = "UPDATE users SET cart_items = %s WHERE id = %s"
+        return self._execute_query(query, (json.dumps(cart), user_id), is_commit=True)
+
+    def remove_from_cart(self, user_id, product_id):
+        cart = self.get_user_cart(user_id)
+        if product_id in cart:
+            cart.remove(product_id)
+        query = "UPDATE users SET cart_items = %s WHERE id = %s"
+        return self._execute_query(query, (json.dumps(cart), user_id), is_commit=True)
+
+    def clear_cart(self, user_id):
+        query = "UPDATE users SET cart_items = '[]' WHERE id = %s"
+        return self._execute_query(query, (user_id,), is_commit=True)
+
+    def get_cart_products(self, user_id):
+        cart = self.get_user_cart(user_id)
+        if not cart:
+            return []
+        placeholders = ','.join(['%s'] * len(cart))
+        query = f"SELECT p.*, u.nombre as owner_name FROM products p JOIN users u ON p.owner_user_id = u.id WHERE p.id IN ({placeholders})"
+        return self._execute_query(query, tuple(cart), fetch='all')
+
+    def buy_product(self, user_id, product_id):
+        query = "UPDATE products SET vendido = 1, comprador_user_id = %s WHERE id = %s AND vendido = 0"
+        return self._execute_query(query, (user_id, product_id), is_commit=True)
+
+    def get_user_purchases(self, user_id):
+        query = '''
+            SELECT p.*, u.nombre as owner_name
+            FROM products p
+            JOIN users u ON p.owner_user_id = u.id
+            WHERE p.comprador_user_id = %s
+        '''
+        return self._execute_query(query, (user_id,), fetch='all')
+    
     def hash_password(self, p): return bcrypt.hashpw(p.encode('utf-8'), bcrypt.gensalt())
     def check_password(self, p, h): return bcrypt.checkpw(p.encode('utf-8'), h.encode('utf-8'))
 
     def create_user(self, data):
         data['password_hash'] = self.hash_password(data.pop('password')).decode('utf-8')
-        # Soporta todos los campos nuevos, pero solo los que estén presentes en data
         campos = [
             'nombre', 'apellidos', 'email', 'password_hash', 'telefono', 'username', 'foto_perfil', 'direccion',
             'fecha_nacimiento', 'is_admin', 'estado', 'ultimo_login', 'verificado', 'reputacion', 'nivel'
         ]
-        insert_campos = []
-        insert_values = []
-        for campo in campos:
-            if campo in data:
-                insert_campos.append(campo)
-                insert_values.append(data[campo])
+        insert_campos = [c for c in campos if c in data]
+        insert_values = [data[c] for c in insert_campos]
         query = f"INSERT INTO users ({', '.join(insert_campos)}) VALUES ({', '.join(['%s']*len(insert_campos))})"
-        params = tuple(insert_values)
-        return self._execute_query(query, params, is_commit=True)
+        return self._execute_query(query, tuple(insert_values), is_commit=True)
 
     def check_user(self, email, password):
         user = self._execute_query("SELECT * FROM users WHERE email = %s", (email,), fetch='one')
@@ -114,48 +168,21 @@ class Model:
         return self._execute_query("SELECT id FROM users WHERE email = %s", (email,), fetch='one')
 
     def get_user_by_id(self, user_id):
-        # Devuelve todos los campos relevantes del usuario
         return self._execute_query(
             "SELECT id, nombre, apellidos, email, telefono, username, foto_perfil, direccion, fecha_nacimiento, is_admin, estado, ultimo_login, verificado, reputacion, nivel FROM users WHERE id = %s",
             (user_id,), fetch='one')
 
     def update_user_profile(self, user_id, data):
-        # Solo actualiza los campos presentes en data
         campos_actualizables = [
             'nombre', 'apellidos', 'telefono', 'username', 'foto_perfil', 'direccion',
             'fecha_nacimiento', 'is_admin', 'estado', 'ultimo_login', 'verificado', 'reputacion', 'nivel'
         ]
-        sets = []
-        values = []
-        for campo in campos_actualizables:
-            if campo in data:
-                sets.append(f"{campo}=%s")
-                values.append(data[campo])
-        if not sets:
-            return False
+        sets = [f"{c}=%s" for c in campos_actualizables if c in data]
+        values = [data[c] for c in campos_actualizables if c in data]
+        if not sets: return False
         query = f"UPDATE users SET {', '.join(sets)} WHERE id=%s"
         values.append(user_id)
         return self._execute_query(query, tuple(values), is_commit=True)
-
-    def add_product(self, data):
-        query = """
-            INSERT INTO products (owner_user_id, nombre, descripcion, precio, imagen_path)
-            VALUES (%s, %s, %s, %s, %s)
-        """
-        params = (
-            data['owner_user_id'],
-            data['nombre'],
-            data.get('descripcion', ''),
-            float(data['precio']),
-            data.get('imagen_path', '')
-        )
-        return self._execute_query(query, params, is_commit=True)
-
-        
-    def update_product(self, data, product_id, user_id):
-        query = "UPDATE products SET nombre=%s, descripcion=%s, precio=%s, imagen_path=%s WHERE id=%s AND owner_user_id=%s"
-        params = (data['nombre'], data['descripcion'], data['precio'], data.get('imagen_path', ''), product_id, user_id)
-        return self._execute_query(query, params, is_commit=True)
 
     def delete_product(self, product_id, user_id):
         query = "DELETE FROM products WHERE id=%s AND owner_user_id=%s"
@@ -163,7 +190,7 @@ class Model:
 
     def get_all_products(self, search_term=None):
         query = "SELECT p.*, u.nombre as owner_name FROM products p JOIN users u ON p.owner_user_id = u.id"
-        params = None
+        params = ()
         if search_term:
             query += " WHERE p.nombre LIKE %s"
             params = (f"%{search_term}%",)
@@ -202,7 +229,7 @@ class Model:
         try:
             cursor = conn.cursor(dictionary=True)
             conn.start_transaction()
-            cursor.execute("SELECT * FROM trades WHERE id = %s AND status = 'pendiente'", (trade_id,))
+            cursor.execute("SELECT * FROM trades WHERE id = %s AND status = 'pendiente' FOR UPDATE", (trade_id,))
             trade = cursor.fetchone()
             if not trade: raise Error("Trade no encontrado o no está pendiente")
             p_user, p_prod = trade['proposer_user_id'], trade['proposer_product_id']
@@ -210,7 +237,7 @@ class Model:
             cursor.execute("UPDATE products SET owner_user_id = %s WHERE id = %s", (r_user, p_prod))
             cursor.execute("UPDATE products SET owner_user_id = %s WHERE id = %s", (p_user, r_prod))
             cursor.execute("UPDATE trades SET status = 'completado' WHERE id = %s", (trade_id,))
-            cursor.execute("UPDATE trades SET status = 'cancelado' WHERE (proposer_product_id = %s OR receiver_product_id = %s OR proposer_product_id = %s OR receiver_product_id = %s) AND status = 'pendiente' AND id != %s", 
+            cursor.execute("UPDATE trades SET status = 'cancelado' WHERE (proposer_product_id = %s OR receiver_product_id = %s OR proposer_product_id = %s OR receiver_product_id = %s) AND status = 'pendiente' AND id != %s",
                            (p_prod, p_prod, r_prod, r_prod, trade_id))
             conn.commit()
             return True

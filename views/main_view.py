@@ -1,7 +1,9 @@
 # views/main_view.py
 import customtkinter as ctk
 from . import theme
-from .pages import LoginPage, RegisterPage, MainShopPage, ProductDetailPage, ProfilePage, ProductFormPage, ProposeTradePage, MyTradesPage, CartPage
+from .pages import (LoginPage, RegisterPage, MainShopPage, ProductDetailPage, 
+                    ProfilePage, ProductFormPage, ProposeTradePage, MyTradesPage, 
+                    CartPage, PurchasesPage, ChatPage, PaymentConfirmationPage, AllChatsPage) # Páginas nuevas añadidas
 from .components import ToastNotification
 
 class MainView(ctk.CTk):
@@ -16,8 +18,9 @@ class MainView(ctk.CTk):
         container.grid_rowconfigure(0, weight=1); container.grid_columnconfigure(0, weight=1)
 
         self._frames = {}
-        from .pages import CartPage, PurchasesPage
-        pages = (LoginPage, RegisterPage, MainShopPage, ProductDetailPage, ProfilePage, ProductFormPage, ProposeTradePage, MyTradesPage, CartPage, PurchasesPage)
+        pages = (LoginPage, RegisterPage, MainShopPage, ProductDetailPage, ProfilePage, 
+                 ProductFormPage, ProposeTradePage, MyTradesPage, CartPage, 
+                 PurchasesPage, ChatPage, PaymentConfirmationPage, AllChatsPage)
         for F in pages:
             frame = F(container, self.controller)
             self._frames[F.__name__] = frame
